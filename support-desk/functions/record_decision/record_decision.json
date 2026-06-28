@@ -1,0 +1,11 @@
+{
+  "name": "record_decision",
+  "description": "Commits the human reviewer's approve/reject decision to a ticket: on approve, stores the (possibly edited) reply as approved_reply and marks the ticket 'sent'; on reject, marks it 'rejected'.",
+  "type": "API",
+  "visibility": "POD",
+  "code": { "$file": "code.py" },
+  "permissions": { "grants": [
+    { "resource_type": "datastore_table", "resource_name": "tickets",
+      "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"] }
+  ] }
+}

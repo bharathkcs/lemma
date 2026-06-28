@@ -1,0 +1,11 @@
+{
+  "name": "save_draft",
+  "description": "Persists the reply-drafter's draft_reply + kb_sources onto a ticket and sets status to 'awaiting_approval'.",
+  "type": "API",
+  "visibility": "POD",
+  "code": { "$file": "code.py" },
+  "permissions": { "grants": [
+    { "resource_type": "datastore_table", "resource_name": "tickets",
+      "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"] }
+  ] }
+}

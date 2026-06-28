@@ -1,0 +1,5 @@
+{
+  "name": "support-desk-app",
+  "description": "Operator console for the Support Desk: live ticket inbox, AI triage + drafted reply, and the human approval gate (approve / edit / reject) that resumes the workflow.",
+  "public_slug": "support-desk"
+}

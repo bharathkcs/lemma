@@ -1,0 +1,21 @@
+{
+  "name": "reply-drafter",
+  "description": "Reads a triaged ticket, researches the /knowledge base (RAG), and RETURNS a drafted customer reply + sources as structured output. Read-only — the workflow persists the draft via a function. Never sends to the customer.",
+  "instruction": { "$file": "instruction.md" },
+  "toolsets": ["POD"],
+  "visibility": "POD",
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "draft_reply": { "type": "string" },
+      "kb_sources": { "type": "string" }
+    },
+    "required": ["draft_reply"]
+  },
+  "permissions": { "grants": [
+    { "resource_type": "datastore_table", "resource_name": "tickets",
+      "permission_ids": ["datastore.table.read", "datastore.record.read"] },
+    { "resource_type": "folder", "resource_name": "/knowledge",
+      "permission_ids": ["folder.read"] }
+  ] }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "triage-agent",
+  "description": "Reads a support ticket and returns its category + priority as structured output. Read-only — the workflow persists the result via a function.",
+  "instruction": { "$file": "instruction.md" },
+  "toolsets": ["POD"],
+  "visibility": "POD",
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "category": { "type": "string", "enum": ["billing", "shipping", "account", "technical", "refund", "other"] },
+      "priority": { "type": "string", "enum": ["low", "normal", "high", "urgent"] },
+      "triage_reason": { "type": "string" }
+    },
+    "required": ["category", "priority", "triage_reason"]
+  },
+  "permissions": { "grants": [
+    { "resource_type": "datastore_table", "resource_name": "tickets",
+      "permission_ids": ["datastore.table.read", "datastore.record.read"] }
+  ] }
+}

@@ -1,0 +1,5 @@
+{
+  "format_version": 2,
+  "name": "support-desk",
+  "description": "AI Support Desk — triages incoming customer issues, drafts replies grounded in a knowledge base, and routes every reply through a human approval step before it is sent."
+}

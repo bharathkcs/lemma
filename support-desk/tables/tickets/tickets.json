@@ -1,0 +1,41 @@
+{
+  // The support queue: one row per incoming customer issue, carrying the full
+  // lifecycle state the workflow writes and the app reads. Shared team data,
+  // so RLS is OFF (every agent/seat sees the whole queue).
+  "name": "tickets",
+  "primary_key_column": "id",
+  "enable_rls": false,
+  "visibility": "POD",
+  "columns": [
+    { "name": "number",         "type": "SERIAL",  "auto": true, "unique": true },
+    { "name": "channel",        "type": "ENUM",    "required": true, "default": "email",
+      "options": ["email", "form", "slack", "chat"] },
+    { "name": "customer_email", "type": "TEXT",    "max_length": 320 },
+    { "name": "customer_name",  "type": "TEXT",    "max_length": 200 },
+    { "name": "subject",        "type": "TEXT",    "required": true, "max_length": 300 },
+    { "name": "body",           "type": "TEXT",    "required": true },
+
+    // --- filled by the triage agent ---
+    { "name": "category",       "type": "ENUM",    "default": "other",
+      "options": ["billing", "shipping", "account", "technical", "refund", "other"] },
+    { "name": "priority",       "type": "ENUM",    "default": "normal",
+      "options": ["low", "normal", "high", "urgent"] },
+    { "name": "triage_reason",  "type": "TEXT" },
+
+    // --- filled by the reply-drafter agent ---
+    { "name": "draft_reply",    "type": "TEXT" },
+    { "name": "kb_sources",     "type": "TEXT", "max_length": 500 },
+
+    // --- human decision + final outcome ---
+    { "name": "approved_reply", "type": "TEXT" },
+    { "name": "reviewer_notes", "type": "TEXT" },
+
+    // lifecycle: new -> triaged -> drafted -> awaiting_approval -> (sent | rejected)
+    { "name": "status",         "type": "ENUM",    "required": true, "default": "new",
+      "options": ["new", "triaged", "drafted", "awaiting_approval", "sent", "rejected"] },
+
+    // link back to the workflow run that is processing this ticket
+    { "name": "run_id",         "type": "TEXT", "max_length": 120 }
+  ],
+  "config": {}
+}

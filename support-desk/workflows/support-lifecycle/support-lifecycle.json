@@ -1,0 +1,155 @@
+{
+  "name": "support-lifecycle",
+  "description": "End-to-end support ticket lifecycle: triage -> draft reply (RAG) -> human approval gate -> commit decision. Agents return judgments; functions persist them deterministically. The FORM node pauses the run for a human to approve/edit/reject before any reply is finalized.",
+  "start": { "type": "MANUAL" },
+  "nodes": [
+    {
+      "id": "intake",
+      "type": "FORM",
+      "label": "Select ticket",
+      "config": {
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "ticket_id": { "type": "string", "title": "Ticket ID" }
+          },
+          "required": ["ticket_id"]
+        },
+        "ui_schema": { "ui:order": ["ticket_id"] }
+      }
+    },
+
+    {
+      "id": "triage",
+      "type": "AGENT",
+      "label": "Triage ticket",
+      "config": {
+        "agent_name": "triage-agent",
+        "input_mapping": {
+          "ticket_id": { "type": "expression", "value": "intake.ticket_id" }
+        }
+      }
+    },
+
+    {
+      "id": "save_triage",
+      "type": "FUNCTION",
+      "label": "Save triage",
+      "config": {
+        "function_name": "save_triage",
+        "input_mapping": {
+          "ticket_id":     { "type": "expression", "value": "intake.ticket_id" },
+          "category":      { "type": "expression", "value": "triage.category" },
+          "priority":      { "type": "expression", "value": "triage.priority" },
+          "triage_reason": { "type": "expression", "value": "triage.triage_reason", "optional": true }
+        }
+      }
+    },
+
+    {
+      "id": "draft",
+      "type": "AGENT",
+      "label": "Draft reply (RAG)",
+      "config": {
+        "agent_name": "reply-drafter",
+        "input_mapping": {
+          "ticket_id": { "type": "expression", "value": "intake.ticket_id" }
+        }
+      }
+    },
+
+    {
+      "id": "save_draft",
+      "type": "FUNCTION",
+      "label": "Save draft",
+      "config": {
+        "function_name": "save_draft",
+        "input_mapping": {
+          "ticket_id":   { "type": "expression", "value": "intake.ticket_id" },
+          "draft_reply": { "type": "expression", "value": "draft.draft_reply" },
+          "kb_sources":  { "type": "expression", "value": "draft.kb_sources", "optional": true }
+        }
+      }
+    },
+
+    {
+      "id": "approval",
+      "type": "FORM",
+      "label": "Human approval",
+      "config": {
+        "assignee_pod_member_id": "019f0a6f-ff27-77f1-bd87-58c977b26677",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "ticket_id":     { "type": "string", "title": "Ticket",
+                               "default": { "type": "expression", "value": "intake.ticket_id", "optional": true } },
+            "approved":      { "type": "boolean", "title": "Approve this reply?" },
+            "final_reply":   { "type": "string",  "title": "Reply (edit before sending)",
+                               "default": { "type": "expression", "value": "draft.draft_reply", "optional": true } },
+            "reviewer_notes":{ "type": "string",  "title": "Notes / feedback (optional)" }
+          },
+          "required": ["approved"]
+        },
+        "ui_schema": { "ui:order": ["ticket_id", "approved", "final_reply", "reviewer_notes"] }
+      }
+    },
+
+    {
+      "id": "route",
+      "type": "DECISION",
+      "label": "Approved?",
+      "config": {
+        "rules": [
+          { "condition": "approval.approved == `true`", "next_node_id": "commit_approved" }
+        ]
+      }
+    },
+
+    {
+      "id": "commit_approved",
+      "type": "FUNCTION",
+      "label": "Commit (send)",
+      "config": {
+        "function_name": "record_decision",
+        "input_mapping": {
+          "ticket_id":      { "type": "expression", "value": "intake.ticket_id" },
+          "approved":       { "type": "literal",    "value": true },
+          "final_reply":    { "type": "expression", "value": "approval.final_reply", "optional": true },
+          "reviewer_notes": { "type": "expression", "value": "approval.reviewer_notes", "optional": true }
+        }
+      }
+    },
+
+    {
+      "id": "commit_rejected",
+      "type": "FUNCTION",
+      "label": "Commit (reject)",
+      "config": {
+        "function_name": "record_decision",
+        "input_mapping": {
+          "ticket_id":      { "type": "expression", "value": "intake.ticket_id" },
+          "approved":       { "type": "literal",    "value": false },
+          "reviewer_notes": { "type": "expression", "value": "approval.reviewer_notes", "optional": true }
+        }
+      }
+    },
+
+    { "id": "end", "type": "END", "label": "Done" }
+  ],
+
+  "edges": [
+    { "id": "e_intake_triage",      "source": "intake",      "target": "triage" },
+    { "id": "e_triage_savetriage",  "source": "triage",      "target": "save_triage" },
+    { "id": "e_savetriage_draft",   "source": "save_triage", "target": "draft" },
+    { "id": "e_draft_savedraft",    "source": "draft",       "target": "save_draft" },
+    { "id": "e_savedraft_approval", "source": "save_draft",  "target": "approval" },
+    { "id": "e_approval_route",     "source": "approval",    "target": "route" },
+
+    { "id": "e_route_rejected", "source": "route", "target": "commit_rejected", "label": "rejected (default)" },
+    { "id": "e_route_approved", "source": "route", "target": "commit_approved", "label": "approved" },
+
+    { "id": "e_approved_end", "source": "commit_approved", "target": "end" },
+    { "id": "e_rejected_end", "source": "commit_rejected", "target": "end" }
+  ],
+  "visibility": "POD"
+}
