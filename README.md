@@ -27,8 +27,34 @@ new ticket → 🤖 triage (category + priority)
   - `workflows/support-lifecycle` — orchestration with the human FORM approval gate
   - `apps/support-desk-app/source` — the React operator console (Vite + lemma-sdk)
   - `seed/seed.sh` — uploads KB + sample tickets
+- `support-desk/patches/` — a patch for one upstream Lemma SDK bug we hit and fixed
+  (see *Reliability* below)
 - `BRD.md` / `BRD.docx` — full Business Requirements Document (as-built)
 - `SUBMISSION.md` — hackathon submission writeup
+
+## Reliability & hardening
+Real workflows fail in messy ways, so the operator console is built to **stay usable
+when the engine misbehaves** rather than assume a happy path:
+
+- **The ticket table is the source of truth.** The approval queue is driven by ticket
+  `status = awaiting_approval`, *enriched* by a live workflow wait when one exists — it
+  is not driven by the live wait alone. So if a workflow run is cancelled or times out,
+  the ticket is still actionable instead of becoming an invisible orphan.
+- **Dual commit path.** When a live approval wait exists, approving **resumes** the
+  workflow; when the run is gone, the decision is **committed directly** via the
+  `record_decision` function. The reviewer can always approve/reject.
+- **Self-healing triage.** If an AI run stalls mid-pipeline (triaged but no draft), the
+  ticket shows a **Retry AI** action that re-runs the lifecycle cleanly.
+- **Deterministic writes with retry.** All DB writes are functions (not agent
+  tool-calls) with transient-5xx retry, so flaky sandbox→API calls don't corrupt state.
+- **Honest UI states.** Loading, error+retry, and empty states everywhere — no silent
+  spinners.
+- **SDK fix included.** We found and fixed a real upstream bug in the SDK hook
+  `useWorkflowRunWaitAssignments` where, under React 18 StrictMode, an aborted first
+  request left the approval queue stuck on "Loading…" forever. The one-line-region fix
+  is captured in `support-desk/patches/lemma-sdk-approval-queue-loading-fix.patch`.
+- The pure lifecycle logic (`apps/.../src/lifecycle.ts`) is small, framework-free, and
+  unit-tested.
 
 ## Run it
 See `support-desk/README.md` for the full setup runbook (`lemma pods create` →

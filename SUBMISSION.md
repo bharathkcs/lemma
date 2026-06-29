@@ -49,10 +49,19 @@ one-off chatbot. It ingests messy input, maps it to structured state, applies AI
 judgment, and **requires human authorization before acting**. It is durable,
 observable, and multi-actor — what Lemma is built for.
 
+## Built for production, not just a demo
+Beyond the happy path, the console is hardened to stay usable when the workflow engine
+misbehaves: the approval queue is driven by the **ticket table as source of truth**
+(enriched by live workflow waits, never dependent on them), so a cancelled or timed-out
+run never strands a ticket. Approvals **resume** a live run or **commit directly** when
+the run is gone, stalled AI runs get a one-click **Retry**, and we found + fixed a real
+upstream SDK bug that wedged the approval queue on "Loading…" forever under React
+StrictMode. See the *Reliability & hardening* section of the README.
+
 ## Links
 - **Live app (hosted on lemma.work):** https://support-desk-app.apps.lemma.work
 - **Pod access granted to:** ayush@gappy.ai
-- **Source / pod bundle:** (GitHub repo link — optional; bundle is in `support-desk/`)
+- **Source / pod bundle (this repo):** https://github.com/bharathkcs/lemma
 
 ## How to try it (for judges)
 1. Open the app link (sign in as a pod member).

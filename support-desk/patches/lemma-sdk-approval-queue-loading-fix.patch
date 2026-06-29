@@ -1,0 +1,27 @@
+diff --git a/lemma-typescript/src/react/useWorkflowRunWaitAssignments.ts b/lemma-typescript/src/react/useWorkflowRunWaitAssignments.ts
+index f037879..aff92a2 100644
+--- a/lemma-typescript/src/react/useWorkflowRunWaitAssignments.ts
++++ b/lemma-typescript/src/react/useWorkflowRunWaitAssignments.ts
+@@ -60,6 +60,9 @@ export function useWorkflowRunWaitAssignments({
+         limit: overrides.limit ?? limit,
+         pageToken: overrides.pageToken ?? pageToken ?? undefined,
+       });
++      // Don't write *data* state for an aborted request (a newer one owns it),
++      // but loading state is always cleared in `finally` below so the consumer
++      // never wedges on "Loading…" after a StrictMode mount/abort/remount.
+       if (signal?.aborted) return [];
+       const nextAssignments = response.items ?? [];
+       setAssignments(nextAssignments);
+@@ -72,7 +75,11 @@ export function useWorkflowRunWaitAssignments({
+       setError(normalized);
+       return [];
+     } finally {
+-      if (!signal?.aborted) setIsLoading(false);
++      // Always resolve the loading flag. Under React 18 StrictMode the first
++      // request is aborted by the effect cleanup; skipping this setter on abort
++      // left `isLoading` stuck at true forever and the queue never rendered.
++      // A no-op setState on an unmounted component is harmless in React 18.
++      setIsLoading(false);
+     }
+   }, [client, enabled, limit, pageToken, podId]);
+ 
